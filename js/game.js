@@ -101,6 +101,27 @@
         'Quanto pesare tu? E quanto volere pesare? Drago ascoltare.',
         'Prima di spiezzare, io dovere sapere quanto spiezzare.',
       ],
+      sober_greet: [
+        'Vodka essere liquida debolezza. Noi bere solo disagio.',
+        'In Russia, vodka scorrere come fiume Volga. Oggi, fiume secco.',
+        'Fegato di compagno lavorare meno oggi. Drago approvare.',
+        'Anche Drago dire no a vodka. Muscolo non costruire da bottiglia.',
+        'Bottiglia rimanere chiusa. Come pugno di Drago prima del colpo.',
+      ],
+      sober_checkin: [
+        'Bravo. Fegato scrivere lettera di ringraziamento.',
+        'Un giorno senza vodka, un giorno di ferro in più.',
+        'Acqua oggi, ferro domani.',
+        'Drago fiero. Faccia non mostrare, ma fiero.',
+        'Bicchiere vuoto. Volontà piena.',
+      ],
+      sober_slip: [
+        'Vodka vince oggi. Domani, rivincita.',
+        'Anche macchina sovietica perdere olio a volte. Ripartire domani.',
+        'Streak spiezzato. Non tu. Rialzati, compagno.',
+        'Va bene. Anche Drago assaggiare vodka una volta. Una volta.',
+        'Libretto nero segnare. Ma libretto anche voltare pagina.',
+      ],
     },
     en: {
       greet_train: [
@@ -171,6 +192,27 @@
         'How much you weigh? How much you want to weigh? Drago listens.',
         'Before breaking, I must know how much to break.',
       ],
+      sober_greet: [
+        'Vodka is liquid weakness. We drink only discomfort.',
+        'In Russia, vodka flows like Volga river. Today, river is dry.',
+        'Comrade liver works less today. Drago approves.',
+        'Even Drago says no to vodka. Muscle does not build from bottle.',
+        'Bottle stays closed. Like Drago fist before the punch.',
+      ],
+      sober_checkin: [
+        'Good. Liver writes thank-you letter.',
+        'One day without vodka, one more day of iron.',
+        'Water today, iron tomorrow.',
+        'Drago is proud. Face does not show, but proud.',
+        'Empty glass. Full willpower.',
+      ],
+      sober_slip: [
+        'Vodka wins today. Tomorrow, rematch.',
+        'Even Soviet machine leaks oil sometimes. Restart tomorrow.',
+        'Streak is broken. Not you. Get up, comrade.',
+        'Is okay. Even Drago taste vodka once. Once.',
+        'Little black book writes it down. But book also turns page.',
+      ],
     },
   };
 
@@ -227,7 +269,32 @@
     { id: 'b_random', icon: '🎲', it: 'Roulette Russa', en: 'Russian Roulette', dit: 'Completa un circuito A CASO', den: 'Complete a random circuit' },
     { id: 'b_dawn', icon: '🌅', it: 'Alba Sovietica', en: 'Soviet Dawn', dit: 'Sessione iniziata prima delle 8', den: 'Session started before 8 am' },
     { id: 'b_weigh7', icon: '📈', it: 'Amico della Bilancia', en: 'Friend of the Scale', dit: '7 pesate registrate', den: '7 weigh-ins logged' },
+    { id: 'b_sober7', icon: '🥛', it: 'Settimana Secca', en: 'Dry Week', dit: '7 giorni senza vodka', den: '7 days without vodka' },
+    { id: 'b_sober30', icon: '🧊', it: 'Mese di Ghiaccio', en: 'Month of Ice', dit: '30 giorni senza vodka', den: '30 days without vodka' },
+    { id: 'b_sober100', icon: '🏔️', it: 'Cento Giorni Sobri', en: 'Hundred Sober Days', dit: '100 giorni senza vodka', den: '100 days without vodka' },
+    { id: 'b_dryjan', icon: '⛄', it: 'Gennaio Secco', en: 'Dry January', dit: 'Gennaio completato senza vodka', den: 'January completed without vodka' },
+    { id: 'b_soberoct', icon: '🎃', it: 'Ottobre Sobrio', en: 'Sober October', dit: 'Ottobre completato senza vodka', den: 'October completed without vodka' },
+    { id: 'b_cleanmonth', icon: '🗓️', it: 'Mese Pulito', en: 'Clean Month', dit: 'Un mese intero senza vodka', den: 'A full month without vodka' },
+    { id: 'b_comeback', icon: '🔁', it: 'Rialzata Sovietica', en: 'Soviet Comeback', dit: 'Streak di 7 giorni dopo una ricaduta', den: '7-day streak after a slip' },
   ];
+
+  // has monthIdx (0=Jan…11=Dec) fully elapsed with no slip inside it, since tracking began?
+  function soberMonthClean(sober, monthIdx) {
+    if (!sober.startDate) return false;
+    const today = STORE.todayStr();
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear; y >= thisYear - 1; y--) {
+      const mm = String(monthIdx + 1).padStart(2, '0');
+      const first = y + '-' + mm + '-01';
+      const lastDay = new Date(y, monthIdx + 1, 0).getDate();
+      const last = y + '-' + mm + '-' + String(lastDay).padStart(2, '0');
+      if (today < last) continue;
+      if (sober.startDate > first) continue;
+      if (sober.lastSlip && sober.lastSlip >= first && sober.lastSlip <= last) continue;
+      return true;
+    }
+    return false;
+  }
 
   function checkBadges(s) {
     const have = s.badges || {};
@@ -238,6 +305,9 @@
     s.history.forEach(function (x) { const w = STORE.weekId(x.date); wk[w] = (wk[w] || 0) + 1; });
     const maxWk = Object.keys(wk).reduce(function (m, k) { return Math.max(m, wk[k]); }, 0);
     const lastKg = s.weights.length ? s.weights[s.weights.length - 1].kg : null;
+    const sober = s.sober || {};
+    const soberSt = STORE.soberStatus();
+    const otherMonths = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11];
     const cond = {
       b_first: sessions >= 1,
       b_double: maxWk >= 2,
@@ -253,6 +323,13 @@
       b_random: s.history.some(function (x) { return x.session === 'X'; }),
       b_dawn: s.history.some(function (x) { return typeof x.hour === 'number' && x.hour < 8; }),
       b_weigh7: s.weights.length >= 7,
+      b_sober7: soberSt.current >= 7,
+      b_sober30: soberSt.current >= 30,
+      b_sober100: soberSt.current >= 100,
+      b_dryjan: soberMonthClean(sober, 0),
+      b_soberoct: soberMonthClean(sober, 9),
+      b_cleanmonth: otherMonths.some(function (m) { return soberMonthClean(sober, m); }),
+      b_comeback: (sober.slipCount || 0) >= 1 && soberSt.current >= 7,
     };
     const fresh = [];
     BADGES.forEach(function (b) {
@@ -299,6 +376,26 @@
     return res;
   }
 
+  // call AFTER STORE.soberCheckIn
+  function onSoberCheckIn(firstToday) {
+    const fresh = checkBadges(STORE.get());
+    let xp = (firstToday ? 8 : 0) + fresh.length * 25;
+    const res = xp ? addXp(xp) : { earned: 0, total: STORE.get().xp || 0, level: levelInfo(STORE.get().xp || 0), levelUp: false };
+    res.badges = fresh;
+    res.mood = 'sober_checkin';
+    return res;
+  }
+
+  // call AFTER STORE.soberSlip
+  function onSoberSlip() {
+    const fresh = checkBadges(STORE.get());
+    const xp = 5 + fresh.length * 25;
+    const res = addXp(xp);
+    res.badges = fresh;
+    res.mood = 'sober_slip';
+    return res;
+  }
+
   window.GAME = {
     mascot: MASCOT,
     phrase: phrase,
@@ -306,6 +403,8 @@
     badges: BADGES,
     onSession: onSession,
     onWeight: onWeight,
+    onSoberCheckIn: onSoberCheckIn,
+    onSoberSlip: onSoberSlip,
     badgeName: function (b) { const l = window.I18N.getLang(); return b[l] || b.it; },
     badgeDesc: function (b) { return window.I18N.getLang() === 'en' ? b.den : b.dit; },
   };
