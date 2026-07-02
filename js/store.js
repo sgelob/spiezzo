@@ -12,7 +12,7 @@
     reminders: false,
     sheetUrl: '',
     lastSync: null,
-    profile: { startWeight: 88, targetWeight: 75, startDate: null },
+    profile: { startWeight: null, targetWeight: null, startDate: null },
     weights: [],                  // { date: 'YYYY-MM-DD', kg: number }
     history: [],                  // { id, date, hour, session, minutes, volume, items: [{ex, sets:[{value, weight}]}] }
     xp: 0,                        // Rubli del Disagio

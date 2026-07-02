@@ -412,6 +412,39 @@
     const s = STORE.get();
     const ws = s.weights;
     const start = s.profile.startWeight, goal = s.profile.targetWeight;
+
+    if (start == null || goal == null) {
+      app.innerHTML = `
+        <header class="pagehead"><h1>${esc(t('weight_title'))}</h1></header>
+        ${mascotCard(GAME.phrase('setup'))}
+        <section class="card">
+          <div class="kicker">${esc(t('setup_kicker'))}</div>
+          <form id="pform">
+            <label class="lbl">${esc(t('setup_start'))}
+              <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="pstart" placeholder="${esc(t('weight_placeholder'))}" required>
+            </label>
+            <label class="lbl">${esc(t('setup_goal'))}
+              <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="pgoal" required>
+            </label>
+            <button class="btn" type="submit">${esc(t('setup_save'))}</button>
+          </form>
+          <div class="hint">${esc(t('setup_hint'))}</div>
+        </section>`;
+      $('#pform').onsubmit = function (ev) {
+        ev.preventDefault();
+        const a = parseFloat(String($('#pstart').value).replace(',', '.'));
+        const b = parseFloat(String($('#pgoal').value).replace(',', '.'));
+        if (!a || !b || a < 30 || b < 30 || a > 250 || b > 250) return;
+        STORE.set({ profile: Object.assign({}, s.profile, { startWeight: a, targetWeight: b }) });
+        if (!s.weights.length) {
+          const firstToday = STORE.logWeight(a);
+          scaleReaction = GAME.onWeight(a, null, firstToday);
+        }
+        buzz(50);
+        render();
+      };
+      return;
+    }
     const now = ws.length ? ws[ws.length - 1].kg : start;
     const lost = start - now, togo = now - goal;
 
@@ -424,7 +457,7 @@
       if (perWeek > 0.05 && togo > 0) {
         const weeks = togo / perWeek;
         const d = new Date(); d.setDate(d.getDate() + Math.round(weeks * 7));
-        projection = t('weight_projection') + ' ' + d.toLocaleDateString(window.I18N.getLang() === 'it' ? 'it-IT' : 'en-GB', { month: 'long', year: 'numeric' });
+        projection = t('weight_projection').replace('{goal}', fmtKg(goal)) + ' ' + d.toLocaleDateString(window.I18N.getLang() === 'it' ? 'it-IT' : 'en-GB', { month: 'long', year: 'numeric' });
       }
     }
 
@@ -576,6 +609,15 @@
         <div class="hint">${esc(t('settings_reminder_note'))}</div>
       </section>
       <section class="card">
+        <div class="kicker">${esc(t('settings_profile'))}</div>
+        <label class="lbl">${esc(t('setup_start'))}
+          <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="profstart" value="${s.profile.startWeight != null ? s.profile.startWeight : ''}">
+        </label>
+        <label class="lbl">${esc(t('setup_goal'))}
+          <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="profgoal" value="${s.profile.targetWeight != null ? s.profile.targetWeight : ''}">
+        </label>
+      </section>
+      <section class="card">
         <div class="kicker">${esc(t('settings_sync'))}</div>
         <label class="lbl">${esc(t('settings_sync_url'))}
           <input type="url" id="sheeturl" placeholder="${esc(t('settings_sync_url_ph'))}" value="${esc(s.sheetUrl || '')}">
@@ -623,6 +665,15 @@
         STORE.set({ reminders: false });
       }
     };
+    ['profstart', 'profgoal'].forEach(function (id) {
+      $('#' + id).onchange = function () {
+        const v = parseFloat(String(this.value).replace(',', '.'));
+        if (!v || v < 30 || v > 250) return;
+        const p = Object.assign({}, STORE.get().profile);
+        p[id === 'profstart' ? 'startWeight' : 'targetWeight'] = v;
+        STORE.set({ profile: p });
+      };
+    });
     $('#sheeturl').onchange = function () { STORE.set({ sheetUrl: this.value.trim() }); };
     $('#syncnow').onclick = function () {
       const msg = $('#syncmsg');

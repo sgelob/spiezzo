@@ -82,6 +82,11 @@
         'In Siberia nessuno saltare. Nemmeno corda.',
         'Salti tu? Io segnare su libretto nero.',
       ],
+      setup: [
+        'Dimmi numeri, compagno. Bilancia non aspettare.',
+        'Quanto pesare tu? E quanto volere pesare? Drago ascoltare.',
+        'Prima di spiezzare, io dovere sapere quanto spiezzare.',
+      ],
     },
     en: {
       greet_train: [
@@ -132,6 +137,11 @@
         'You skip exercise?! Drago sees everything.',
         'In Siberia nobody skips. Not even rope.',
         'You skip? I write it in little black book.',
+      ],
+      setup: [
+        'Tell me numbers, comrade. Scale does not wait.',
+        'How much you weigh? How much you want to weigh? Drago listens.',
+        'Before breaking, I must know how much to break.',
       ],
     },
   };
@@ -208,9 +218,9 @@
       b_50: sessions >= 50,
       b_streak4: streak.best >= 4,
       b_streak12: streak.best >= 12,
-      b_kg1: lastKg !== null && lastKg <= s.profile.startWeight - 1,
-      b_kg5: lastKg !== null && lastKg <= s.profile.startWeight - 5,
-      b_goal: lastKg !== null && lastKg <= s.profile.targetWeight,
+      b_kg1: lastKg !== null && s.profile.startWeight != null && lastKg <= s.profile.startWeight - 1,
+      b_kg5: lastKg !== null && s.profile.startWeight != null && lastKg <= s.profile.startWeight - 5,
+      b_goal: lastKg !== null && s.profile.targetWeight != null && lastKg <= s.profile.targetWeight,
       b_vol10k: vol >= 10000,
       b_random: s.history.some(function (x) { return x.session === 'X'; }),
       b_dawn: s.history.some(function (x) { return typeof x.hour === 'number' && x.hour < 8; }),

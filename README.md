@@ -18,8 +18,9 @@ MTB riding and weight loss. 1–2 sessions a week, under an hour, minimal gear
   pull / core / cardio) from ~800 exercises when you want variety.
 - **Guided player** — step-by-step instructions (IT/EN), rest countdowns,
   beeps + vibration, screen wake-lock, progress bar.
-- **Weight log** — quick weigh-in, 7-day trend chart, goal line (88 → 75 kg),
-  pace feedback and projected goal date.
+- **Weight log** — you set your own starting and target weight (the "pact with
+  discomfort"), then log quick weigh-ins: 7-day trend chart, goal line, pace
+  feedback and projected goal date.
 - **Stats** — sessions, streaks (weeks in a row), minutes of disagio, total kg lifted.
 - **Offline-first** — full app + exercise data cached by a service worker.
   Install it from the browser menu ("Add to Home Screen").
