@@ -14,7 +14,9 @@
     lastSync: null,
     profile: { startWeight: 88, targetWeight: 75, startDate: null },
     weights: [],                  // { date: 'YYYY-MM-DD', kg: number }
-    history: [],                  // { id, date, session, minutes, volume, items: [{ex, sets:[{value, weight}]}] }
+    history: [],                  // { id, date, hour, session, minutes, volume, items: [{ex, sets:[{value, weight}]}] }
+    xp: 0,                        // Rubli del Disagio
+    badges: {},                   // badgeId -> date unlocked
     perf: {},                     // perf[sessionKey + ':' + exId] = { value, weight }
     pendingSync: [],              // record ids not yet pushed to the sheet
   };
@@ -61,17 +63,20 @@
 
     logWeight: function (kg) {
       const date = todayStr();
+      const firstToday = !state.weights.some(function (w) { return w.date === date; });
       state.weights = state.weights.filter(function (w) { return w.date !== date; });
       state.weights.push({ date: date, kg: kg });
       state.weights.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
       if (!state.profile.startDate) state.profile.startDate = date;
       state.pendingSync.push('w:' + date);
       save();
+      return firstToday;
     },
 
     logSession: function (rec) {
       rec.id = 's' + Date.now();
       rec.date = todayStr();
+      rec.hour = new Date().getHours();
       state.history.push(rec);
       rec.items.forEach(function (it) {
         const lastSet = it.sets[it.sets.length - 1];

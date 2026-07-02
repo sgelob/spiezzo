@@ -1,5 +1,5 @@
 /* SPIEZZO service worker — app shell precache + runtime font cache */
-const VERSION = 'spiezzo-v2';
+const VERSION = 'spiezzo-v3';
 const SHELL = [
   './',
   'index.html',
@@ -7,6 +7,7 @@ const SHELL = [
   'js/i18n.js',
   'js/store.js',
   'js/program.js',
+  'js/game.js',
   'js/ui.js',
   'data/exercises.js',
   'manifest.webmanifest',

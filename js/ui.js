@@ -9,7 +9,8 @@
 
   const app = document.getElementById('app');
   let view = 'today';
-  let generated = null; // last "A CASO" session
+  let generated = null;   // last "A CASO" session
+  let scaleReaction = null; // one-shot Drago reaction on the weight view
 
   /* ---------- helpers ---------- */
   function h(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -36,6 +37,31 @@
   }
   function buzz(pattern) {
     if (STORE.get().vibrate && navigator.vibrate) navigator.vibrate(pattern || 80);
+  }
+
+  function toast(msg) {
+    const el = h('<div class="toast">' + esc(msg) + '</div>');
+    document.body.appendChild(el);
+    setTimeout(function () { el.classList.add('show'); }, 20);
+    setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 350); }, 2800);
+  }
+
+  function mascotCard(text, sub) {
+    return `<section class="mascotcard">
+      <div class="mwrap">${GAME.mascot}</div>
+      <div class="mtext">
+        <div class="bubble">${esc(text)}</div>
+        ${sub ? '<div class="msub">' + sub + '</div>' : ''}
+      </div>
+    </section>`;
+  }
+
+  function xpBar(level) {
+    return `<div class="xpwrap">
+      <div class="xprow"><b>${esc(t('level'))} ${level.n} — ${esc(level.name)}</b><span>₽ ${(STORE.get().xp || 0).toLocaleString()}</span></div>
+      <div class="xpbar"><i style="width:${Math.round(level.progress * 100)}%"></i></div>
+      <div class="xpnext">${level.nextName ? level.toNext + ' ' + esc(t('to_next')) + ' · ' + esc(level.nextName) : esc(t('max_level'))}</div>
+    </div>`;
   }
 
   /* ---------- navigation ---------- */
@@ -73,6 +99,13 @@
         <div class="tag">${esc(t('tagline'))}<br><em>${esc(t('subline'))}</em></div>
         <button class="gear" data-nav="settings" aria-label="${esc(t('settings'))}">⚙</button>
       </header>
+      ${(function () {
+        const lvl = GAME.levelInfo(s.xp || 0);
+        const msg = !isTrainDay ? GAME.phrase('greet_rest')
+          : st.current >= 2 && Math.random() < 0.5 ? GAME.phrase('greet_streak', { n: st.current })
+          : GAME.phrase('greet_train');
+        return mascotCard(msg, esc(t('level')) + ' ' + lvl.n + ' — ' + esc(lvl.name) + ' · ₽ ' + (s.xp || 0).toLocaleString());
+      })()}
       <section class="card hero">
         <div class="kicker">${esc(t('today_next'))} · ${esc(isTrainDay ? t('today_is_trainday') : t('today_is_restday'))}</div>
         <h2>${esc(t('session_' + nextKey))}</h2>
@@ -234,7 +267,10 @@
           <button class="btn big" id="main">${isTime ? esc(t('btn_start_timer')) : esc(t('btn_done'))}</button>
         </div>`;
       $('#abort', overlay).onclick = function () { if (confirm(t('abort_confirm'))) close(); };
-      $('#skip', overlay).onclick = function () { idx++; step(); };
+      $('#skip', overlay).onclick = function () {
+        if (st.log && Math.random() < 0.6) toast(GAME.phrase('skip'));
+        idx++; step();
+      };
       const done = function (value) {
         if (st.log) {
           const kgEl = $('#wkg', overlay);
@@ -329,11 +365,34 @@
       beep(660, 0.2); setTimeout(function () { beep(880, 0.3); }, 220); buzz([100, 80, 100, 80, 200]);
       $('#save', overlay).onclick = function () {
         STORE.logSession({ session: session.key, minutes: minutes, volume: volume, items: items });
+        const reward = GAME.onSession(STORE.get().history[STORE.get().history.length - 1]);
         STORE.maybeAutoSync();
         generated = null;
         view = 'today';
-        close();
+        renderReward(reward);
       };
+    }
+
+    function renderReward(reward) {
+      const say = reward.levelUp ? GAME.phrase('levelup')
+        : reward.badges.length ? GAME.phrase('badge')
+        : GAME.phrase('done');
+      overlay.innerHTML = `
+        <div class="pbody donebody reward">
+          <div class="mwrap big">${GAME.mascot}</div>
+          <div class="bubble center">${esc(say)}</div>
+          ${reward.levelUp ? '<div class="lvlup">' + esc(t('levelup_title')) + '</div>' : ''}
+          <div class="xpearn">+${reward.earned} <small>${esc(t('xp_earned'))}</small></div>
+          ${xpBar(reward.level)}
+          ${reward.badges.length ? `<div class="newbadges">
+            ${reward.badges.map(function (b) {
+              return '<div class="badge unlocked fresh"><span class="bicon">' + b.icon + '</span><b>' + esc(GAME.badgeName(b)) + '</b><small>' + esc(GAME.badgeDesc(b)) + '</small></div>';
+            }).join('')}
+          </div>` : ''}
+        </div>
+        <div class="pfoot"><button class="btn big" id="go">${esc(t('btn_continue'))}</button></div>`;
+      if (reward.levelUp || reward.badges.length) { beep(523, 0.12); setTimeout(function () { beep(659, 0.12); }, 140); setTimeout(function () { beep(784, 0.25); }, 280); }
+      $('#go', overlay).onclick = function () { close(); };
     }
 
     step();
@@ -369,8 +428,18 @@
       }
     }
 
+    let reactionHtml = '';
+    if (scaleReaction) {
+      const r = scaleReaction;
+      const sub = (r.earned ? '+' + r.earned + ' ₽ · ' : '') +
+        r.badges.map(function (b) { return b.icon + ' ' + esc(GAME.badgeName(b)); }).join(' · ');
+      reactionHtml = mascotCard(GAME.phrase(r.mood), sub || null);
+      scaleReaction = null;
+    }
+
     app.innerHTML = `
       <header class="pagehead"><h1>${esc(t('weight_title'))}</h1></header>
+      ${reactionHtml}
       <section class="card">
         <form id="wform" class="wentry">
           <input type="number" step="0.1" min="30" max="250" inputmode="decimal" id="winput" placeholder="${esc(t('weight_placeholder'))}" required>
@@ -395,7 +464,10 @@
       ev.preventDefault();
       const v = parseFloat($('#winput').value.replace(',', '.'));
       if (v && v > 30 && v < 250) {
-        STORE.logWeight(v);
+        const prev = STORE.get().weights;
+        const prevKg = prev.length ? prev[prev.length - 1].kg : null;
+        const firstToday = STORE.logWeight(v);
+        scaleReaction = GAME.onWeight(v, prevKg, firstToday);
         STORE.maybeAutoSync();
         buzz(50);
         render();
@@ -440,8 +512,22 @@
     const rows = s.history.slice().reverse().slice(0, 30).map(function (x) {
       return `<li><span class="qty">${esc(x.session)}</span><span class="nm">${fmtDate(x.date)}</span><span class="eq">${x.minutes} min · ${x.volume} kg</span></li>`;
     }).join('');
+    const lvl = GAME.levelInfo(s.xp || 0);
+    const badgeGrid = GAME.badges.map(function (b) {
+      const got = (s.badges || {})[b.id];
+      return `<div class="badge ${got ? 'unlocked' : 'locked'}">
+        <span class="bicon">${b.icon}</span>
+        <b>${esc(GAME.badgeName(b))}</b>
+        <small>${esc(got ? fmtDate(got) : GAME.badgeDesc(b))}</small>
+      </div>`;
+    }).join('');
+
     app.innerHTML = `
       <header class="pagehead"><h1>${esc(t('stats_title'))}</h1></header>
+      <section class="card lvlcard">
+        <div class="mwrap">${GAME.mascot}</div>
+        ${xpBar(lvl)}
+      </section>
       <section class="tiles two">
         <div class="tile hot"><b>${s.history.length}</b><span>${esc(t('stats_sessions'))}</span></div>
         <div class="tile"><b>${st.activeWeeks}</b><span>${esc(t('stats_weeks'))}</span></div>
@@ -453,6 +539,10 @@
       <section class="tiles two">
         <div class="tile"><b>${minutes}</b><span>${esc(t('stats_minutes'))}</span></div>
         <div class="tile"><b>${Math.round(volume).toLocaleString()}</b><span>${esc(t('stats_volume'))}</span></div>
+      </section>
+      <section class="card">
+        <div class="kicker">${esc(t('badges_title'))}</div>
+        <div class="badges">${badgeGrid}</div>
       </section>
       <section class="card">
         <div class="kicker">${esc(t('stats_history'))}</div>
