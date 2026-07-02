@@ -11,6 +11,7 @@
   let view = 'today';
   let generated = null;   // last "A CASO" session
   let scaleReaction = null; // one-shot Drago reaction on the weight view
+  let soberReaction = null; // one-shot Drago reaction on the sober view
 
   /* ---------- helpers ---------- */
   function h(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -80,6 +81,7 @@
     if (view === 'today') renderToday();
     else if (view === 'train') renderTrain();
     else if (view === 'weight') renderWeight();
+    else if (view === 'sober') renderSober();
     else if (view === 'stats') renderStats();
     else if (view === 'settings') renderSettings();
     app.scrollTop = 0;
@@ -544,6 +546,70 @@
     <div class="legend"><span class="lg raw"></span>kg <span class="lg avg"></span>${esc(t('weight_trend'))}</div>`;
   }
 
+  /* ---------- SOBER (no-vodka streak) ---------- */
+  function renderSober() {
+    const s = STORE.get();
+    const sober = s.sober;
+    const st = STORE.soberStatus();
+    const months = t('months_short');
+
+    let reactionHtml;
+    if (soberReaction) {
+      const r = soberReaction;
+      const sub = (r.earned ? '+' + r.earned + ' ₽' : '') +
+        (r.badges.length ? ' · ' + r.badges.map(function (b) { return b.icon + ' ' + esc(GAME.badgeName(b)); }).join(' · ') : '');
+      reactionHtml = mascotCard(GAME.phrase(r.mood), sub || null);
+      soberReaction = null;
+    } else {
+      reactionHtml = mascotCard(GAME.phrase('sober_greet'), st.startDate ? esc(t('sober_since')) + ' ' + fmtDate(st.startDate) : null);
+    }
+
+    app.innerHTML = `
+      <header class="pagehead"><h1>${esc(t('sober_title'))}</h1></header>
+      ${reactionHtml}
+      <section class="tiles">
+        <div class="tile hot"><b>${st.current}</b><span>${esc(t('sober_streak_current'))}</span></div>
+        <div class="tile"><b>${st.best}</b><span>${esc(t('sober_streak_best'))}</span></div>
+        <div class="tile"><b>${st.slipCount}</b><span>${esc(t('sober_slips'))}</span></div>
+      </section>
+      <section class="card">
+        <button class="btn big" id="soberok" ${st.checkedToday ? 'disabled' : ''}>${esc(st.checkedToday ? t('sober_checked_today') : t('sober_checkin_btn'))}</button>
+        <button class="btn ghost" id="soberslip">${esc(t('sober_slip_btn'))}</button>
+      </section>
+      <section class="card">
+        <div class="kicker">${esc(t('sober_months_kicker'))}</div>
+        <div class="days">${months.map(function (m, i) {
+          return '<button data-month="' + i + '" class="' + (sober.challengeMonths.indexOf(i) !== -1 ? 'on' : '') + '">' + esc(m) + '</button>';
+        }).join('')}</div>
+        <div class="hint">${esc(t('sober_months_hint'))}</div>
+      </section>`;
+
+    $('#soberok').onclick = function () {
+      if (st.checkedToday) return;
+      const firstToday = STORE.soberCheckIn();
+      soberReaction = GAME.onSoberCheckIn(firstToday);
+      buzz(50); beep(660, 0.12);
+      render();
+    };
+    $('#soberslip').onclick = function () {
+      if (!confirm(t('sober_slip_confirm'))) return;
+      STORE.soberSlip();
+      soberReaction = GAME.onSoberSlip();
+      buzz([80, 60, 80]);
+      render();
+    };
+    document.querySelectorAll('[data-month]').forEach(function (b) {
+      b.onclick = function () {
+        const m = +b.dataset.month;
+        const list = STORE.get().sober.challengeMonths.slice();
+        const idx = list.indexOf(m);
+        if (idx === -1) list.push(m); else list.splice(idx, 1);
+        STORE.setSoberMonths(list);
+        render();
+      };
+    });
+  }
+
   /* ---------- STATS ---------- */
   function renderStats() {
     const s = STORE.get();
@@ -554,6 +620,7 @@
       return `<li><span class="qty">${esc(x.session)}</span><span class="nm">${fmtDate(x.date)}</span><span class="eq">${x.minutes} min · ${x.volume} kg</span></li>`;
     }).join('');
     const lvl = GAME.levelInfo(s.xp || 0);
+    const sober = STORE.soberStatus();
     const badgeGrid = GAME.badges.map(function (b) {
       const got = (s.badges || {})[b.id];
       return `<div class="badge ${got ? 'unlocked' : 'locked'}">
@@ -580,6 +647,10 @@
       <section class="tiles two">
         <div class="tile"><b>${minutes}</b><span>${esc(t('stats_minutes'))}</span></div>
         <div class="tile"><b>${Math.round(volume).toLocaleString()}</b><span>${esc(t('stats_volume'))}</span></div>
+      </section>
+      <section class="tiles two">
+        <div class="tile hot"><b>${sober.current}</b><span>${esc(t('stats_sober_streak'))}</span></div>
+        <div class="tile"><b>${sober.best}</b><span>${esc(t('stats_sober_best'))}</span></div>
       </section>
       <section class="card">
         <div class="kicker">${esc(t('badges_title'))}</div>

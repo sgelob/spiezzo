@@ -19,6 +19,14 @@
     badges: {},                   // badgeId -> date unlocked
     perf: {},                     // perf[sessionKey + ':' + exId] = { value, weight }
     pendingSync: [],              // record ids not yet pushed to the sheet
+    sober: {                      // no-vodka streak
+      challengeMonths: [0, 9],    // Dry January + Sober October by default (0=Jan … 11=Dec)
+      startDate: null,            // first check-in or slip
+      lastSlip: null,             // 'YYYY-MM-DD' of most recent slip, or null
+      checkins: {},               // 'YYYY-MM-DD' -> true (for XP + streak-day dedupe)
+      bestStreak: 0,
+      slipCount: 0,
+    },
   };
 
   let state = load();
@@ -41,6 +49,16 @@
   function todayStr() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function daysBetween(a, b) {
+    return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   }
 
   // ISO week id like "2026-W27" (Mon-based)
@@ -120,6 +138,48 @@
         while (idx > 0 && consecutive(ids[idx - 1], ids[idx])) { cur++; idx--; }
       }
       return { current: cur, best: best, activeWeeks: ids.length };
+    },
+
+    soberCheckIn: function () {
+      const date = todayStr();
+      if (!state.sober.startDate) state.sober.startDate = date;
+      const firstToday = !state.sober.checkins[date];
+      state.sober.checkins[date] = true;
+      save();
+      return firstToday;
+    },
+
+    soberSlip: function () {
+      const date = todayStr();
+      if (!state.sober.startDate) state.sober.startDate = date;
+      state.sober.lastSlip = date;
+      state.sober.slipCount = (state.sober.slipCount || 0) + 1;
+      save();
+    },
+
+    setSoberMonths: function (months) {
+      state.sober.challengeMonths = months.slice().sort(function (a, b) { return a - b; });
+      save();
+    },
+
+    // current/best streak of consecutive sober days, ending today (or reset by lastSlip)
+    soberStatus: function () {
+      const sb = state.sober;
+      if (!sb.startDate) {
+        return { current: 0, best: sb.bestStreak || 0, startDate: null, lastSlip: null, checkedToday: false, slipCount: sb.slipCount || 0 };
+      }
+      const anchor = sb.lastSlip ? addDays(sb.lastSlip, 1) : sb.startDate;
+      const today = todayStr();
+      const current = Math.max(0, daysBetween(anchor, today) + 1);
+      if (current > (sb.bestStreak || 0)) { sb.bestStreak = current; save(); }
+      return {
+        current: current,
+        best: sb.bestStreak || 0,
+        startDate: sb.startDate,
+        lastSlip: sb.lastSlip || null,
+        checkedToday: !!sb.checkins[today],
+        slipCount: sb.slipCount || 0,
+      };
     },
 
     exportJSON: function () {
