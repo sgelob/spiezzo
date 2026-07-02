@@ -39,11 +39,17 @@
     if (STORE.get().vibrate && navigator.vibrate) navigator.vibrate(pattern || 80);
   }
 
-  function toast(msg) {
-    const el = h('<div class="toast">' + esc(msg) + '</div>');
+  // small Drago that slides in, comments, and leaves; mood: 'go' | 'skip'
+  function dragoPop(mood, phraseKey) {
+    const old = document.querySelector('.dragopop');
+    if (old) old.remove();
+    const el = h(`<div class="dragopop ${mood}">
+      <div class="dbubble">${esc(GAME.phrase(phraseKey || mood))}</div>
+      <div class="dwrap">${GAME.mascot}</div>
+    </div>`);
     document.body.appendChild(el);
     setTimeout(function () { el.classList.add('show'); }, 20);
-    setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 350); }, 2800);
+    setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 300); }, 2600);
   }
 
   function mascotCard(text, sub) {
@@ -268,7 +274,7 @@
         </div>`;
       $('#abort', overlay).onclick = function () { if (confirm(t('abort_confirm'))) close(); };
       $('#skip', overlay).onclick = function () {
-        if (st.log && Math.random() < 0.6) toast(GAME.phrase('skip'));
+        dragoPop('skip');
         idx++; step();
       };
       const done = function (value) {
@@ -285,6 +291,7 @@
       if (isTime) {
         $('#main', overlay).onclick = function () {
           const btn = this; btn.disabled = true;
+          dragoPop('go');
           runCountdown(target, $('#tdisp', overlay), function () { done(target); });
         };
       } else {
@@ -302,7 +309,7 @@
         </div>
         <div class="pfoot"><button class="btn big" id="skip">${esc(t('btn_skip'))} →</button></div>`;
       $('#abort', overlay).onclick = function () { if (confirm(t('abort_confirm'))) close(); };
-      $('#skip', overlay).onclick = function () { if (timer) clearInterval(timer); idx++; step(); };
+      $('#skip', overlay).onclick = function () { dragoPop('skip', 'skip_rest'); if (timer) clearInterval(timer); idx++; step(); };
       runCountdown(st.secs, $('#tdisp', overlay), function () { idx++; step(); });
     }
 
@@ -321,9 +328,10 @@
           <button class="btn big" id="main">${esc(t('btn_start_timer'))}</button>
         </div>`;
       $('#abort', overlay).onclick = function () { if (confirm(t('abort_confirm'))) close(); };
-      $('#skip', overlay).onclick = function () { if (timer) clearInterval(timer); idx++; step(); };
+      $('#skip', overlay).onclick = function () { dragoPop('skip'); if (timer) clearInterval(timer); idx++; step(); };
       $('#main', overlay).onclick = function () {
         this.disabled = true;
+        dragoPop('go');
         runCountdown(total, $('#tdisp', overlay), function () { idx++; step(); });
       };
     }
