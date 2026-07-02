@@ -77,10 +77,24 @@
       weight_same: [
         'Bilancia ferma. Come inverno russo: lungo, ma passare.',
       ],
+      go: [
+        'Davai, compagno! Ferro non aspettare nessuno.',
+        'VIA! Dolore essere solo debolezza che scappa.',
+        'Adesso tu spiezzare. Io guardare. Forse annuire.',
+        'Muscoli non crescere guardando. Davai!',
+        'Drago contare su di te. Non deludere Drago.',
+      ],
       skip: [
         'Tu saltare esercizio?! Drago vedere tutto.',
         'In Siberia nessuno saltare. Nemmeno corda.',
         'Salti tu? Io segnare su libretto nero.',
+        'Divano chiamare te? Drago sentire tutto.',
+        'Saltare oggi, piangere in salita domenica.',
+      ],
+      skip_rest: [
+        'Tu saltare anche riposo? Impaziente come treno di Mosca.',
+        'Riposo essere parte di piano. Drago non amare improvvisazione.',
+        'Niente riposo? Hmm. Drago quasi approvare. Quasi.',
       ],
       setup: [
         'Dimmi numeri, compagno. Bilancia non aspettare.',
@@ -133,10 +147,24 @@
       weight_same: [
         'Scale is frozen. Like Russian winter: long, but it passes.',
       ],
+      go: [
+        'Davai, comrade! Iron waits for nobody.',
+        'GO! Pain is only weakness running away.',
+        'Now you break. I watch. Maybe I nod.',
+        'Muscles do not grow by watching. Davai!',
+        'Drago counts on you. Do not disappoint Drago.',
+      ],
       skip: [
         'You skip exercise?! Drago sees everything.',
         'In Siberia nobody skips. Not even rope.',
         'You skip? I write it in little black book.',
+        'Couch is calling you? Drago hears everything.',
+        'Skip today, cry on Sunday climb.',
+      ],
+      skip_rest: [
+        'You skip even rest? Impatient like Moscow train.',
+        'Rest is part of plan. Drago does not love improvisation.',
+        'No rest? Hmm. Drago almost approves. Almost.',
       ],
       setup: [
         'Tell me numbers, comrade. Scale does not wait.',

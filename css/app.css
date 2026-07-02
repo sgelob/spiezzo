@@ -295,16 +295,45 @@ body.locked { overflow: hidden; }
 .newbadges { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
 .newbadges .badge { min-width: 140px; }
 
-.toast {
-  position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 60;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--graphite); color: #fff; border-radius: var(--r);
-  padding: 10px 16px; font-size: 14px; font-weight: 600;
-  max-width: 86vw; text-align: center;
-  opacity: 0; transition: opacity .3s ease, transform .3s ease;
-  pointer-events: none;
+/* Drago pop — VIA / Salta reactions in the player */
+.dragopop {
+  position: fixed; right: 14px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 70;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  max-width: 240px; pointer-events: none;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .25s ease, transform .25s cubic-bezier(.2, 1.4, .4, 1);
 }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.dragopop.show { opacity: 1; transform: translateY(0); }
+.dragopop .dwrap { margin-right: 8px; }
+.dragopop .drago { width: 56px; height: auto; display: block; }
+.dragopop .dbubble {
+  position: relative;
+  background: var(--linen); border: 1px solid var(--bone); border-radius: var(--r);
+  padding: 10px 12px;
+  font-size: 14px; font-weight: 600; color: var(--graphite); line-height: 1.35;
+}
+.dragopop .dbubble::after {
+  content: ''; position: absolute; right: 24px; bottom: -7px;
+  width: 12px; height: 12px; background: var(--linen);
+  border-right: 1px solid var(--bone); border-bottom: 1px solid var(--bone);
+  transform: rotate(45deg);
+}
+.dragopop.go .drago { transform-origin: 50% 92%; animation: drago-pump .55s ease .2s 2; }
+.dragopop.skip .drago { transform-origin: 50% 88%; animation: drago-shake .45s ease .2s 2; }
+@keyframes drago-pump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-7px) scale(1.07); }
+  60% { transform: translateY(0) scale(.97); }
+}
+@keyframes drago-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dragopop { transition: opacity .25s ease; transform: none; }
+  .dragopop.go .drago, .dragopop.skip .drago { animation: none; }
+}
 
 /* entry animation — quiet, print-like */
 #app > * { animation: rise .3s ease both; }
