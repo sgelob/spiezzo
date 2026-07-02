@@ -1,5 +1,5 @@
 /* SPIEZZO service worker — app shell precache + runtime font cache */
-const VERSION = 'spiezzo-v1';
+const VERSION = 'spiezzo-v2';
 const SHELL = [
   './',
   'index.html',

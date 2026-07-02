@@ -77,7 +77,7 @@
         <div class="kicker">${esc(t('today_next'))} · ${esc(isTrainDay ? t('today_is_trainday') : t('today_is_restday'))}</div>
         <h2>${esc(t('session_' + nextKey))}</h2>
         <button class="btn big" id="start">${esc(t('today_start'))}</button>
-        <button class="btn ghost" id="random">🎲 ${esc(t('today_random'))}</button>
+        <button class="btn ghost" id="random">${esc(t('today_random'))}</button>
         <div class="hint">${esc(t('today_random_hint'))}</div>
       </section>
       <section class="tiles">
@@ -125,7 +125,7 @@
         <ul class="exlist">${session.finisher.items.map(itemRow).join('')}</ul>
       </section>` : ''}
       <div class="stickybar">
-        ${isGen ? `<button class="btn ghost" id="regen">🎲 ${esc(t('regenerate'))}</button>` : ''}
+        ${isGen ? `<button class="btn ghost" id="regen">${esc(t('regenerate'))}</button>` : ''}
         <button class="btn big" id="start">${esc(t('today_start'))}</button>
       </div>`;
     $('#start').onclick = function () { startWorkout(session); };

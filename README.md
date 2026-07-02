@@ -2,7 +2,7 @@
 
 > **Ti spiezzo in due ruote.** Il disagio è compreso nel prezzo.
 
-A brutalist, installable **PWA** for home strength circuits that support weekly
+An installable **PWA** for home strength circuits that support weekly
 MTB riding and weight loss. 1–2 sessions a week, under an hour, minimal gear
 (dumbbells, barbell, TRX, gym ball, bench), zero servers.
 
@@ -33,7 +33,7 @@ GitHub Pages.
 
 ```
 index.html            app shell
-css/app.css           the garage-soviet look
+css/app.css           warm-paper logbook look (Strava-inspired)
 js/i18n.js            IT/EN strings
 js/store.js           localStorage state + Sheet sync
 js/program.js         sessions, progression, generator
