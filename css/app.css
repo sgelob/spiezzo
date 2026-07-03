@@ -335,6 +335,22 @@ body.locked { overflow: hidden; }
   .dragopop.go .drago, .dragopop.skip .drago { animation: none; }
 }
 
+/* ---------- new: nudge, swap, deload, progress, spark ---------- */
+.nudge { border-left: 3px solid var(--orange); cursor: pointer; }
+.nudge .kicker { color: var(--orange); }
+
+.pheadbtns { display: flex; gap: 8px; }
+
+.bump.deload { color: var(--pewter); }
+
+.prow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.pname { font-size: 16px; font-weight: 600; color: var(--ink); }
+.pdelta { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pdelta.up { color: var(--orange); }
+.pdelta.down { color: var(--pewter); }
+.chart.spark { margin-top: 12px; }
+.chart.spark .avg { stroke-width: 2.5; }
+
 /* entry animation — quiet, print-like */
 #app > * { animation: rise .3s ease both; }
 #app > *:nth-child(2) { animation-delay: .04s; }

@@ -15,17 +15,29 @@ MTB riding and weight loss. 1–2 sessions a week, under an hour, minimal gear
   progression: the app remembers your last numbers and asks for +1 rep, then
   +2.5 kg when you hit the top of the range.
 - **🎲 A CASO** — generates a balanced random circuit (quad / push / hinge /
-  pull / core / cardio) from ~800 exercises when you want variety.
+  pull / core / cardio) from ~800 exercises when you want variety. Like one?
+  **Save it** as a reusable Session C with the same +1 rep progression.
 - **Guided player** — step-by-step instructions (IT/EN), rest countdowns,
-  beeps + vibration, screen wake-lock, progress bar.
+  beeps + vibration, screen wake-lock, progress bar. **Swap** any exercise
+  mid-session for another that hits the same muscle when your gear is busy.
+- **Comeback deload** — after a long layoff the app eases you back in with
+  lighter targets instead of piling on where you left off.
+- **🚵 Ride log** — one-tap MTB ride logging that feeds the weekly streak,
+  earns rubli, and unlocks ride medals (the whole point is supporting riding).
 - **Weight log** — you set your own starting and target weight (the "pact with
   discomfort"), then log quick weigh-ins: 7-day trend chart, goal line, pace
   feedback and projected goal date.
-- **Stats** — sessions, streaks (weeks in a row), minutes of disagio, total kg lifted.
+- **Stats & progress** — sessions, streaks (weeks in a row), rides, minutes of
+  disagio, total kg lifted, plus **per-exercise progress charts** (watch your
+  goblet squat climb week over week).
+- **📸 Weekly recap** — a shareable, Strava-style image of your week (sessions,
+  rides, kg lifted, sober days, Drago's verdict) via the Web Share API.
 - **Offline-first** — full app + exercise data cached by a service worker.
-  Install it from the browser menu ("Add to Home Screen").
+  Install it from the browser menu ("Add to Home Screen"). Requests durable
+  storage so the browser won't evict your streaks.
 - **Data** — lives in your browser (localStorage), exportable as JSON, with
-  optional one-way sync to a **Google Sheet** ([setup guide](GOOGLE_SHEETS.md)).
+  optional two-way sync to a **Google Sheet** ([setup guide](GOOGLE_SHEETS.md)):
+  push everything up, and **restore onto a new device** by pulling it back.
 
 ## Stack
 

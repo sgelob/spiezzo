@@ -15,9 +15,12 @@
     profile: { startWeight: null, targetWeight: null, startDate: null },
     weights: [],                  // { date: 'YYYY-MM-DD', kg: number }
     history: [],                  // { id, date, hour, session, minutes, volume, items: [{ex, sets:[{value, weight}]}] }
+    rides: [],                    // { id, date, hour, minutes } — MTB rides (count toward the weekly streak)
+    custom: null,                 // a saved "A CASO" circuit, promoted to Session C with progression
     xp: 0,                        // Rubli del Disagio
     badges: {},                   // badgeId -> date unlocked
     perf: {},                     // perf[sessionKey + ':' + exId] = { value, weight }
+    lastExport: null,             // ISO time of last JSON export (for the backup nudge)
     pendingSync: [],              // record ids not yet pushed to the sheet
     sober: {                      // no-vodka streak
       challengeMonths: [0, 9],    // Dry January + Sober October by default (0=Jan … 11=Dec)
@@ -107,8 +110,49 @@
       return rec;
     },
 
+    logRide: function (minutes) {
+      const rec = { id: 'r' + Date.now(), date: todayStr(), hour: new Date().getHours(), minutes: minutes || 0 };
+      state.rides.push(rec);
+      state.pendingSync.push(rec.id);
+      save();
+      return rec;
+    },
+
+    saveCustom: function (session) { state.custom = session; save(); },
+    clearCustom: function () { state.custom = null; save(); },
+    setLastExport: function () { state.lastExport = new Date().toISOString(); save(); },
+
     lastPerf: function (sessionKey, exId) {
       return state.perf[sessionKey + ':' + exId] || null;
+    },
+
+    // full performance series for one exercise across all sessions (oldest first)
+    // returns [{ date, value, weight }] using the top set of each session
+    perfSeries: function (exId) {
+      const out = [];
+      state.history.forEach(function (h) {
+        (h.items || []).forEach(function (it) {
+          if (it.ex !== exId || !it.sets || !it.sets.length) return;
+          let best = it.sets[0];
+          it.sets.forEach(function (s2) {
+            if (s2.value > best.value || (s2.value === best.value && (s2.weight || 0) > (best.weight || 0))) best = s2;
+          });
+          out.push({ date: h.date, value: best.value, weight: best.weight || null });
+        });
+      });
+      out.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+      return out;
+    },
+
+    // list of exercise ids that have at least `min` logged data points, most-trained first
+    trackedExercises: function (min) {
+      const count = {};
+      state.history.forEach(function (h) {
+        (h.items || []).forEach(function (it) { count[it.ex] = (count[it.ex] || 0) + 1; });
+      });
+      return Object.keys(count)
+        .filter(function (id) { return count[id] >= (min || 2); })
+        .sort(function (a, b) { return count[b] - count[a]; });
     },
 
     sessionsThisWeek: function () {
@@ -116,10 +160,16 @@
       return state.history.filter(function (h) { return weekId(h.date) === wk; }).length;
     },
 
-    // streak: consecutive weeks (ending this or last week) with >=1 session
+    ridesThisWeek: function () {
+      const wk = weekId(todayStr());
+      return state.rides.filter(function (r) { return weekId(r.date) === wk; }).length;
+    },
+
+    // streak: consecutive weeks (ending this or last week) with >=1 session OR ride
     streaks: function () {
       const weeks = {};
       state.history.forEach(function (h) { weeks[weekId(h.date)] = true; });
+      state.rides.forEach(function (r) { weeks[weekId(r.date)] = true; });
       const ids = Object.keys(weeks).sort();
       if (!ids.length) return { current: 0, best: 0, activeWeeks: 0 };
       let best = 1, run = 1;
@@ -203,6 +253,11 @@
         sessions: state.history.map(function (h) {
           return { id: h.id, date: h.date, session: h.session, minutes: h.minutes, volume: h.volume };
         }),
+        rides: state.rides.map(function (r) {
+          return { id: r.id, date: r.date, minutes: r.minutes };
+        }),
+        config: { trainDays: state.trainDays, reminders: state.reminders },
+        backup: JSON.stringify(state),   // full snapshot, so a new device can restore everything
       };
       return fetch(state.sheetUrl, {
         method: 'POST',
@@ -214,6 +269,24 @@
       }).then(function () {
         state.pendingSync = [];
         state.lastSync = new Date().toISOString();
+        save();
+      });
+    },
+
+    // pull the full snapshot back from the sheet (device migration)
+    pull: function () {
+      if (!state.sheetUrl) return Promise.reject(new Error('no url'));
+      const prevUrl = state.sheetUrl;
+      const url = prevUrl + (prevUrl.indexOf('?') === -1 ? '?' : '&') + 'backup=1';
+      return fetch(url, { method: 'GET' }).then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+      }).then(function (data) {
+        if (!data || !data.backup) throw new Error('no backup');
+        const snap = JSON.parse(data.backup);
+        if (!snap || typeof snap !== 'object' || !Array.isArray(snap.history)) throw new Error('bad backup');
+        state = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), snap);
+        state.sheetUrl = snap.sheetUrl || prevUrl;   // keep the endpoint so future syncs work
         save();
       });
     },
