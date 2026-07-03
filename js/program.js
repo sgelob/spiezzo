@@ -86,20 +86,59 @@
      For each program item, look at the last logged performance for (sessionKey, exId).
      reps: +1 rep per completed session; at `top`, if weighted → suggest +2.5 kg and reset to base.
      time: +5 s per completed session, capped at `top`. */
-  function suggest(item, last) {
+  function suggest(item, last, opts) {
+    const deload = opts && opts.deload;
+    let res;
     if (!last) {
-      return { value: item.base, weight: last && last.weight || null, bumpWeight: false };
-    }
-    if (item.mode === 'time') {
-      return { value: Math.min(item.top, last.value + 5), weight: null, bumpWeight: false };
-    }
-    if (last.value >= item.top) {
+      res = { value: item.base, weight: last && last.weight || null, bumpWeight: false };
+    } else if (item.mode === 'time') {
+      res = { value: Math.min(item.top, last.value + 5), weight: null, bumpWeight: false };
+    } else if (last.value >= item.top) {
       if (item.weighted) {
-        return { value: item.base, weight: (last.weight || 0) + 2.5, bumpWeight: true };
+        res = { value: item.base, weight: (last.weight || 0) + 2.5, bumpWeight: true };
+      } else {
+        res = { value: item.top, weight: null, bumpWeight: false };
       }
-      return { value: item.top, weight: null, bumpWeight: false };
+    } else {
+      res = { value: last.value + 1, weight: last.weight || null, bumpWeight: false };
     }
-    return { value: last.value + 1, weight: last.weight || null, bumpWeight: false };
+    // comeback deload: after a long layoff, ease back in instead of piling on
+    if (deload && last) {
+      res.value = Math.max(item.base, Math.round(res.value * 0.85));
+      if (res.weight) res.weight = Math.round(res.weight * 0.9 * 2) / 2;
+      res.bumpWeight = false;
+      res.deloaded = true;
+    }
+    return res;
+  }
+
+  // days since the most recent strength session (Infinity if none)
+  function daysSinceLast(history) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i];
+      if (h.session === 'A' || h.session === 'B' || h.session === 'C' || h.session === 'X') {
+        return Math.round((Date.now() - new Date(h.date + 'T12:00:00').getTime()) / 86400000);
+      }
+    }
+    return Infinity;
+  }
+
+  // pick a different exercise for the same movement pattern (used by the in-workout swap)
+  function substitute(exId) {
+    const cur = window.EXERCISES.find(function (e) { return e.id === exId; });
+    if (!cur) return null;
+    const cands = pool().filter(function (e) { return e.target === cur.target && e.id !== exId; });
+    if (!cands.length) return null;
+    return cands[Math.floor(Math.random() * cands.length)];
+  }
+
+  // turn a freshly generated "A CASO" circuit into a saveable Session C with real progression
+  function makeCustom(gen) {
+    const items = gen.circuit.items.map(function (it) {
+      const top = it.mode === 'time' ? it.base + 20 : it.base + 4;
+      return { ex: it.ex, mode: it.mode, base: it.base, top: top, perSide: it.perSide || false, weighted: it.weighted || false };
+    });
+    return { key: 'C', circuit: { rounds: 3, restExercise: 20, restRound: 90, items: items }, finisher: null };
   }
 
   /* ---- "A CASO" generator ----
@@ -128,12 +167,16 @@
     const p = pool();
     const used = {};
     const items = SLOTS.map(function (slot) {
-      const cands = p.filter(function (e) {
+      let cands = p.filter(function (e) {
         return slot.targets.indexOf(e.target) !== -1 && !used[e.id];
       });
+      // fallbacks so an exhausted slot never crashes the generator
+      if (!cands.length) cands = p.filter(function (e) { return slot.targets.indexOf(e.target) !== -1; });
+      if (!cands.length) cands = p.filter(function (e) { return !used[e.id]; });
+      if (!cands.length) cands = p;
       const pick = cands[Math.floor(rng() * cands.length)];
-      used[pick.id] = true;
-      return { ex: pick.id, mode: slot.mode, base: slot.base, top: slot.base, generated: true };
+      if (pick) used[pick.id] = true;
+      return { ex: pick ? pick.id : (p[0] && p[0].id), mode: slot.mode, base: slot.base, top: slot.base, generated: true };
     });
     return { key: 'X', circuit: { rounds: 3, restExercise: 20, restRound: 90, items: items }, finisher: null };
   }
@@ -144,6 +187,10 @@
     cooldown: COOLDOWN,
     suggest: suggest,
     generate: generate,
+    substitute: substitute,
+    makeCustom: makeCustom,
+    daysSinceLast: daysSinceLast,
+    DELOAD_AFTER_DAYS: 17,
     // which session is next: alternate A/B based on history
     nextSessionKey: function (history) {
       for (let i = history.length - 1; i >= 0; i--) {

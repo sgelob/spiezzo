@@ -101,6 +101,21 @@
         'Quanto pesare tu? E quanto volere pesare? Drago ascoltare.',
         'Prima di spiezzare, io dovere sapere quanto spiezzare.',
       ],
+      ride: [
+        'Montagna non spiezzare te oggi. Bene. Domani ferro.',
+        'Tu pedalare. Gambe ringraziare. Drago quasi annuire.',
+        'Ruote girare, grasso tremare. Buon giro, compagno.',
+        'Salita essere maestra severa. Come Drago. Ma con vista.',
+      ],
+      comeback: [
+        'Tu sparire come inverno. Ma tornare. Oggi piano, compagno.',
+        'Macchina fredda deve scaldare motore. Niente eroismi oggi.',
+        'Bentornato dal divano. Riprendiamo con calma. Poi ti spiezzo.',
+      ],
+      save_circuit: [
+        'Circuito salvato. Ora anche destino avere progressione.',
+        'Tu tenere questo circuito. Drago ricordare. Drago ricordare tutto.',
+      ],
       sober_greet: [
         'Vodka essere liquida debolezza. Noi bere solo disagio.',
         'In Russia, vodka scorrere come fiume Volga. Oggi, fiume secco.',
@@ -192,6 +207,21 @@
         'How much you weigh? How much you want to weigh? Drago listens.',
         'Before breaking, I must know how much to break.',
       ],
+      ride: [
+        'Mountain did not break you today. Good. Tomorrow, iron.',
+        'You pedal. Legs thank you. Drago almost nods.',
+        'Wheels turn, fat trembles. Good ride, comrade.',
+        'The climb is a strict teacher. Like Drago. But with a view.',
+      ],
+      comeback: [
+        'You vanish like winter. But you return. Today we go easy, comrade.',
+        'Cold machine must warm the engine. No heroics today.',
+        'Welcome back from the couch. We restart gently. Then I break you.',
+      ],
+      save_circuit: [
+        'Circuit saved. Now even fate has progression.',
+        'You keep this circuit. Drago remembers. Drago remembers everything.',
+      ],
       sober_greet: [
         'Vodka is liquid weakness. We drink only discomfort.',
         'In Russia, vodka flows like Volga river. Today, river is dry.',
@@ -216,10 +246,15 @@
     },
   };
 
+  const lastShown = {};   // key -> last index shown, so we don't repeat the same line back-to-back
   function phrase(key, vars) {
     const lang = window.I18N.getLang();
     const list = (PHRASES[lang] || PHRASES.it)[key] || [];
-    let p = list[Math.floor(Math.random() * list.length)] || '';
+    if (!list.length) return '';
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === lastShown[key]) i = (i + 1) % list.length;
+    lastShown[key] = i;
+    let p = list[i] || '';
     if (vars) Object.keys(vars).forEach(function (k) { p = p.replace('{' + k + '}', vars[k]); });
     return p;
   }
@@ -276,6 +311,9 @@
     { id: 'b_soberoct', icon: '🎃', it: 'Ottobre Sobrio', en: 'Sober October', dit: 'Ottobre completato senza vodka', den: 'October completed without vodka' },
     { id: 'b_cleanmonth', icon: '🗓️', it: 'Mese Pulito', en: 'Clean Month', dit: 'Un mese intero senza vodka', den: 'A full month without vodka' },
     { id: 'b_comeback', icon: '🔁', it: 'Rialzata Sovietica', en: 'Soviet Comeback', dit: 'Streak di 7 giorni dopo una ricaduta', den: '7-day streak after a slip' },
+    { id: 'b_ride1', icon: '🚵', it: 'In Sella', en: 'In the Saddle', dit: 'Registra il primo giro in MTB', den: 'Log your first MTB ride' },
+    { id: 'b_ride10', icon: '⛰️', it: 'Dieci Giri', en: 'Ten Rides', dit: '10 giri in MTB registrati', den: '10 MTB rides logged' },
+    { id: 'b_triple', icon: '🎯', it: 'Settimana Completa', en: 'Full Week', dit: '2 sessioni + 1 giro nella stessa settimana', den: '2 sessions + 1 ride in one week' },
   ];
 
   // has monthIdx (0=Jan…11=Dec) fully elapsed with no slip inside it, since tracking began?
@@ -304,6 +342,10 @@
     const wk = {};
     s.history.forEach(function (x) { const w = STORE.weekId(x.date); wk[w] = (wk[w] || 0) + 1; });
     const maxWk = Object.keys(wk).reduce(function (m, k) { return Math.max(m, wk[k]); }, 0);
+    const rides = s.rides || [];
+    const rideWk = {};
+    rides.forEach(function (r) { const w = STORE.weekId(r.date); rideWk[w] = (rideWk[w] || 0) + 1; });
+    const fullWeek = Object.keys(wk).some(function (w) { return wk[w] >= 2 && (rideWk[w] || 0) >= 1; });
     const lastKg = s.weights.length ? s.weights[s.weights.length - 1].kg : null;
     const sober = s.sober || {};
     const soberSt = STORE.soberStatus();
@@ -330,6 +372,9 @@
       b_soberoct: soberMonthClean(sober, 9),
       b_cleanmonth: otherMonths.some(function (m) { return soberMonthClean(sober, m); }),
       b_comeback: (sober.slipCount || 0) >= 1 && soberSt.current >= 7,
+      b_ride1: rides.length >= 1,
+      b_ride10: rides.length >= 10,
+      b_triple: fullWeek,
     };
     const fresh = [];
     BADGES.forEach(function (b) {
@@ -396,6 +441,16 @@
     return res;
   }
 
+  // call AFTER STORE.logRide
+  function onRide(minutes) {
+    const fresh = checkBadges(STORE.get());
+    const xp = 25 + Math.min(35, Math.floor((minutes || 0) / 2)) + fresh.length * 25;
+    const res = addXp(xp);
+    res.badges = fresh;
+    res.mood = 'ride';
+    return res;
+  }
+
   window.GAME = {
     mascot: MASCOT,
     phrase: phrase,
@@ -405,6 +460,7 @@
     onWeight: onWeight,
     onSoberCheckIn: onSoberCheckIn,
     onSoberSlip: onSoberSlip,
+    onRide: onRide,
     badgeName: function (b) { const l = window.I18N.getLang(); return b[l] || b.it; },
     badgeDesc: function (b) { return window.I18N.getLang() === 'en' ? b.den : b.dit; },
   };
